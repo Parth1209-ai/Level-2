@@ -1,0 +1,212 @@
+Step 1: Set Up Your Environment
+Initialize Node.js Project:
+
+bash
+mkdir quiz-platform
+cd quiz-platform
+npm init -y
+npm install express mongoose body-parser cors
+Create Project Structure:
+
+arduino
+quiz-platform/
+├── server.js
+├── models/
+│   └── Quiz.js
+├── routes/
+│   └── quizRoutes.js
+├── public/
+│   ├── index.html
+│   └── script.js
+└── styles/
+    └── styles.css
+Step 2: Create the Backend
+server.js
+
+javascript
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const quizRoutes = require('./routes/quizRoutes');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(express.static('public'));
+
+// MongoDB Connection
+mongoose.connect('mongodb://localhost:27017/quiz-platform', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+});
+
+// Routes
+app.use('/api/quizzes', quizRoutes);
+
+// Start Server
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});
+models/Quiz.js
+
+javascript
+const mongoose = require('mongoose');
+
+const quizSchema = new mongoose.Schema({
+    title: String,
+    questions: [{
+        question: String,
+        options: [String],
+        correctAnswer: String
+    }]
+});
+
+module.exports = mongoose.model('Quiz', quizSchema);
+routes/quizRoutes.js
+
+javascript
+const express = require('express');
+const router = express.Router();
+const Quiz = require('../models/Quiz');
+
+// Create a quiz
+router.post('/', async (req, res) => {
+    const quiz = new Quiz(req.body);
+    await quiz.save();
+    res.status(201).json(quiz);
+});
+
+// Get all quizzes
+router.get('/', async (req, res) => {
+    const quizzes = await Quiz.find();
+    res.json(quizzes);
+});
+
+module.exports = router;
+Step 3: Create the Frontend
+public/index.html
+
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../styles/styles.css">
+    <title>Quiz Platform</title>
+</head>
+<body>
+    <h1>Create a Quiz</h1>
+    <form id="quiz-form">
+        <input type="text" id="quiz-title" placeholder="Quiz Title" required>
+        <div id="questions"></div>
+        <button type="button" onclick="addQuestion()">Add Question</button>
+        <button type="submit">Create Quiz</button>
+    </form>
+
+    <h1>Take a Quiz</h1>
+    <div id="quiz-list"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+public/script.js
+
+javascript
+async function fetchQuizzes() {
+    const response = await fetch('/api/quizzes');
+    const quizzes = await response.json();
+    const quizList = document.getElementById('quiz-list');
+    quizList.innerHTML = quizzes.map(quiz => `
+        <div>
+            <h2>${quiz.title}</h2>
+            <button onclick="takeQuiz('${quiz._id}')">Take Quiz</button>
+        </div>
+    `).join('');
+}
+
+async function addQuiz(event) {
+    event.preventDefault();
+    const title = document.getElementById('quiz-title').value;
+    const questions = [...document.querySelectorAll('.question')].map(q => ({
+        question: q.querySelector('.question-text').value,
+        options: [...q.querySelectorAll('.option')].map(o => o.value),
+        correctAnswer: q.querySelector('.correct-answer').value
+    }));
+
+    await fetch('/api/quizzes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, questions })
+    });
+
+    fetchQuizzes();
+}
+
+function addQuestion() {
+    const questionsDiv = document.getElementById('questions');
+    questionsDiv.insertAdjacentHTML('beforeend', `
+        <div class="question">
+            <input type="text" class="question-text" placeholder="Question" required>
+            <input type="text" class="option" placeholder="Option 1" required>
+            <input type="text" class="option" placeholder="Option 2" required>
+            <input type="text" class="option" placeholder="Option 3">
+            <input type="text" class="option" placeholder="Option 4">
+            <input type="text" class="correct-answer" placeholder="Correct Answer" required>
+        </div>
+    `);
+}
+
+async function takeQuiz(quizId) {
+    const response = await fetch(`/api/quizzes/${quizId}`);
+    const quiz = await response.json();
+    const userAnswers = {};
+    
+    quiz.questions.forEach((q, index) => {
+        userAnswers[`question${index}`] = prompt(`${q.question}\n${q.options.join('\n')}`);
+    });
+
+    const score = Object.keys(userAnswers).reduce((total, key) => {
+        const questionIndex = parseInt(key.replace('question', ''));
+        if (userAnswers[key] === quiz.questions[questionIndex].correctAnswer) {
+            total++;
+        }
+        return total;
+    }, 0);
+
+    alert(`Your score: ${score}/${quiz.questions.length}`);
+}
+
+// Initialize
+document.getElementById('quiz-form').addEventListener('submit', addQuiz);
+fetchQuizzes();
+Step 4: Style the Application
+styles/styles.css
+
+css
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    margin-bottom: 10px;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+.question {
+    margin-bottom: 10px;
+}
+Step 5: Run the Application
+Start the Server:
+
+bash
+node server.js
+Access the Application: Open your browser and go to http://localhost:3000.
