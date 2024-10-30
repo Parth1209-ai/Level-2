@@ -1,0 +1,159 @@
+Create React App: First, set up your React app using Create React App:
+
+bash
+npx create-react-app job-board
+cd job-board
+
+Install Dependencies: You may want to use additional libraries, such as React Router for navigation:
+
+bash
+npm install react-router-dom
+
+Folder Structure
+You can organize your project like this:
+
+bash
+/job-board
+  /src
+    /components
+      JobBoard.js
+      JobForm.js
+      JobList.js
+    App.js
+    index.js
+
+Code Implementation
+1. App Component (src/App.js)
+jsx
+import React from 'react';
+import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
+import JobBoard from './components/JobBoard';
+import JobForm from './components/JobForm';
+
+function App() {
+    return (
+        <Router>
+            <Switch>
+                <Route path="/" exact component={JobBoard} />
+                <Route path="/post-job" component={JobForm} />
+            </Switch>
+        </Router>
+    );
+}
+
+export default App;
+2. Job Board Component (src/components/JobBoard.js)
+jsx
+import React, { useState } from 'react';
+import JobList from './JobList';
+import { Link } from 'react-router-dom';
+
+const JobBoard = () => {
+    const [jobs, setJobs] = useState([]);
+
+    const addJob = (job) => {
+        setJobs((prevJobs) => [...prevJobs, job]);
+    };
+
+    return (
+        <div>
+            <h1>Job Board</h1>
+            <Link to="/post-job">Post a Job</Link>
+            <JobList jobs={jobs} />
+        </div>
+    );
+};
+
+export default JobBoard;
+3. Job Form Component (src/components/JobForm.js)
+jsx
+import React, { useState } from 'react';
+import { useHistory } from 'react-router-dom';
+
+const JobForm = ({ addJob }) => {
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const history = useHistory();
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const newJob = { title, description };
+        addJob(newJob);
+        history.push('/');
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <h2>Post a Job</h2>
+            <input
+                type="text"
+                placeholder="Job Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+            />
+            <textarea
+                placeholder="Job Description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                required
+            />
+            <button type="submit">Post Job</button>
+        </form>
+    );
+};
+
+export default JobForm;
+4. Job List Component (src/components/JobList.js)
+jsx
+import React from 'react';
+
+const JobList = ({ jobs }) => {
+    return (
+        <div>
+            <h2>Job Listings</h2>
+            {jobs.length === 0 ? (
+                <p>No job postings available.</p>
+            ) : (
+                jobs.map((job, index) => (
+                    <div key={index}>
+                        <h3>{job.title}</h3>
+                        <p>{job.description}</p>
+                    </div>
+                ))
+            )}
+        </div>
+    );
+};
+
+export default JobList;
+Connecting Components
+To connect the addJob function to the JobForm component, you’ll need to lift the state up. Modify the JobBoard component to pass addJob as a prop to JobForm.
+
+Updated Job Board Component (src/components/JobBoard.js)
+jsx
+// ... previous imports
+import JobForm from './JobForm';
+
+const JobBoard = () => {
+    const [jobs, setJobs] = useState([]);
+
+    const addJob = (job) => {
+        setJobs((prevJobs) => [...prevJobs, job]);
+    };
+
+    return (
+        <div>
+            <h1>Job Board</h1>
+            <Link to="/post-job">Post a Job</Link>
+            <JobList jobs={jobs} />
+            <Route path="/post-job" render={() => <JobForm addJob={addJob} />} />
+        </div>
+    );
+};
+Running Your App
+Start the App: In the terminal, run:
+
+bash
+Copy code
+npm start
